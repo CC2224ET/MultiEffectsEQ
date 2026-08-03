@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="18.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\ethan\Documents\JUCE PROJECTS\MultiEffectsEQ\build\CMakeFiles\09d4b51033faae03feb0ad8d0af59b75\INSTALL_force.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{B5EC1642-5BA4-3A06-A422-849554430B93}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
