@@ -1,0 +1,8 @@
+# Ignore CMake build folders
+build/
+.cache/
+
+# Ignore compiled binaries just in case
+*.exe
+*.vst3
+*.dll
