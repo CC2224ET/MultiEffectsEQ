@@ -18,22 +18,41 @@ MultieffectsEQProcessor::~MultieffectsEQProcessor() {}
 
 juce::AudioProcessorValueTreeState::ParameterLayout MultieffectsEQProcessor::createParameterLayout()
 {
-    // A vector to hold our parameters before handing them to the APVTS.
+   
     std::vector<std::unique_ptr<juce::RangedAudioParameter>> params;
 
-    // We define a float parameter for the crossover point.
-    // The string ID ("low_mid_crossover") is how we look up the value in the DSP and attach the UI.
+    
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID("low_mid_crossover", 1), // ID and version
-        "Low/Mid Crossover",                       // Human-readable name
-        juce::NormalisableRange<float>(20.0f, 2000.0f, 1.0f, 0.3f), // Min, Max, Step size, Skew (logarithmic curve for freq)
-        250.0f));                                  // Default value
+        juce::ParameterID("low_mid_crossover", 1), 
+        "Low/Mid Crossover",                      
+        juce::NormalisableRange<float>(20.0f, 2000.0f, 1.0f, 0.3f), 
+        250.0f));                                  
 
     return { params.begin(), params.end() };
 }
 
 void MultieffectsEQProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
+    juce::dsp::ProcessSpec spec;
+    spec.sampleRate = sampleRate;
+    spec.maximumBlockSize = samplesPerBlock;
+    spec.numChannels = getTotalNumOutputChannels();
+
+    lowMidCrossoverLP.prepare(spec);
+    lowMidCrossoverLP.setType(juce::dsp::LinkwitzRileyFilterType::lowpass);
+
+    lowMidCrossoverHP.prepare(spec);
+    lowMidCrossoverHP.setType(juce::dsp::LinkwitzRileyFilterType::highpass);
+
+    midHighCrossoverLP.prepare(spec);
+    midHighCrossoverLP.setType(juce::dsp::LinkwitzRileyFilterType::lowpass);
+
+    midHighCrossoverHP.prepare(spec);
+    midHighCrossoverHP.setType(juce::dsp::LinkwitzRileyFilterType::highpass);
+
+    lowBuffer.setSize(spec.numChannels, samplesPerBlock);
+    midBuffer.setSize(spec.numChannels, samplesPerBlock);
+    highBuffer.setSize(spec.numChannels, samplesPerBlock);
 }
 
 void MultieffectsEQProcessor::releaseResources()
@@ -60,6 +79,44 @@ void MultieffectsEQProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
     
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
+
+    float lowMidFreq = 250.0f;  //temp
+    float midHighFreq = 2000.0f; //temp
+
+    lowMidCrossoverLP.setCutoffFrequency(lowMidFreq);
+    lowMidCrossoverHP.setCutoffFrequency(lowMidFreq);
+    midHighCrossoverLP.setCutoffFrequency(midHighFreq);
+    midHighCrossoverHP.setCutoffFrequency(midHighFreq);
+
+    for (int ch = 0; ch < totalNumInputChannels; ++ch)
+    {
+        auto numSamples = buffer.getNumSamples();
+        lowBuffer.copyFrom(ch, 0, buffer, ch, 0, numSamples);
+        midBuffer.copyFrom(ch, 0, buffer, ch, 0, numSamples);
+        highBuffer.copyFrom(ch, 0, buffer, ch, 0, numSamples);
+    }
+
+    juce::dsp::AudioBlock<float> lowBlock(lowBuffer);
+    juce::dsp::AudioBlock<float> midBlock(midBuffer);
+    juce::dsp::AudioBlock<float> highBlock(highBuffer);
+
+    juce::dsp::ProcessContextReplacing<float> lowContext(lowBlock);
+    juce::dsp::ProcessContextReplacing<float> midContext(midBlock);
+    juce::dsp::ProcessContextReplacing<float> highContext(highBlock);
+
+    lowMidCrossoverLP.process(lowContext);
+    lowMidCrossoverHP.process(midContext);
+    midHighCrossoverLP.process(midContext);
+    lowMidCrossoverHP.process(highContext); 
+    midHighCrossoverHP.process(highContext);
+
+    buffer.clear();
+    for (int ch = 0; ch < totalNumInputChannels; ++ch)
+    {
+        buffer.addFrom(ch, 0, lowBuffer, ch, 0, buffer.getNumSamples());
+        buffer.addFrom(ch, 0, midBuffer, ch, 0, buffer.getNumSamples());
+        buffer.addFrom(ch, 0, highBuffer, ch, 0, buffer.getNumSamples());
+    }
 
   
 }

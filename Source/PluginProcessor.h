@@ -41,6 +41,22 @@ public:
     juce::AudioProcessorValueTreeState apvts;
 
 private:
+    //Splits Lows
+    juce::dsp::LinkwitzRileyFilter<float> lowMidCrossoverLP; 
+    juce::dsp::LinkwitzRileyFilter<float> lowMidCrossoverHP;
+    //Splits Highs
+    juce::dsp::LinkwitzRileyFilter<float> midHighCrossoverLP; 
+    juce::dsp::LinkwitzRileyFilter<float> midHighCrossoverHP;
+    //Audio buffer for specific bands
+    juce::AudioBuffer<float> lowBuffer;
+    juce::AudioBuffer<float> midBuffer;
+    juce::AudioBuffer<float> highBuffer;
+
+
+
+
+
+
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MultieffectsEQProcessor)
