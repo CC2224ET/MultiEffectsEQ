@@ -27,6 +27,12 @@ juce::AudioProcessorValueTreeState::ParameterLayout MultieffectsEQProcessor::cre
         "Low/Mid Crossover",                      
         juce::NormalisableRange<float>(20.0f, 2000.0f, 1.0f, 0.3f), 
         250.0f));                                  
+    
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID("mid_high_crossover", 1),
+        "Mid/High Crossover", 
+        juce::NormalisableRange<float>(1000.0f, 20000.0f, 1.0f, 0.3f), 
+        2000.0f));
 
     return { params.begin(), params.end() };
 }
@@ -80,13 +86,13 @@ void MultieffectsEQProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
 
-    float lowMidFreq = 250.0f;  //temp
-    float midHighFreq = 2000.0f; //temp
+    float currentLowMidFreq = apvts.getRawParameterValue("low_mid_crossover")->load();
+    float currentMidHighFreq = apvts.getRawParameterValue("mid_high_crossover")->load();
 
-    lowMidCrossoverLP.setCutoffFrequency(lowMidFreq);
-    lowMidCrossoverHP.setCutoffFrequency(lowMidFreq);
-    midHighCrossoverLP.setCutoffFrequency(midHighFreq);
-    midHighCrossoverHP.setCutoffFrequency(midHighFreq);
+    lowMidCrossoverLP.setCutoffFrequency(currentLowMidFreq);
+    lowMidCrossoverHP.setCutoffFrequency(currentLowMidFreq);
+    midHighCrossoverLP.setCutoffFrequency(currentMidHighFreq);
+    midHighCrossoverHP.setCutoffFrequency(currentMidHighFreq);
 
     for (int ch = 0; ch < totalNumInputChannels; ++ch)
     {
@@ -105,8 +111,10 @@ void MultieffectsEQProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
     juce::dsp::ProcessContextReplacing<float> highContext(highBlock);
 
     lowMidCrossoverLP.process(lowContext);
+
     lowMidCrossoverHP.process(midContext);
     midHighCrossoverLP.process(midContext);
+    
     lowMidCrossoverHP.process(highContext); 
     midHighCrossoverHP.process(highContext);
 
