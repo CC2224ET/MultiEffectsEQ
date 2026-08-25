@@ -78,7 +78,7 @@ bool MultieffectsEQProcessor::isBusesLayoutSupported (const BusesLayout& layouts
 }
 
 
-void MultieffectsEQProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
+void MultieffectsEQProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& /*midiMessages*/)
 {
     
     juce::ScopedNoDenormals noDenormals;
@@ -91,6 +91,10 @@ void MultieffectsEQProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
 
     float currentLowMidFreq = apvts.getRawParameterValue("low_mid_crossover")->load();
     float currentMidHighFreq = apvts.getRawParameterValue("mid_high_crossover")->load();
+
+    // Constraint: Mid/High crossover must be >= Low/Mid crossover
+    if (currentMidHighFreq < currentLowMidFreq)
+        currentMidHighFreq = currentLowMidFreq;
 
     lowMidCrossoverLP.setCutoffFrequency(currentLowMidFreq);
     lowMidCrossoverHP.setCutoffFrequency(currentLowMidFreq);

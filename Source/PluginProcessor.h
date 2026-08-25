@@ -30,9 +30,9 @@ public:
     //Presets
     int getNumPrograms() override { return 1; }
     int getCurrentProgram() override { return 0; }
-    void setCurrentProgram (int index) override {}
-    const juce::String getProgramName (int index) override { return {}; }
-    void changeProgramName (int index, const juce::String& newName) override {}
+    void setCurrentProgram (int /*index*/) override {}
+    const juce::String getProgramName (int /*index*/) override { return {}; }
+    void changeProgramName (int /*index*/, const juce::String& /*newName*/) override {}
 
     //Saving
     void getStateInformation (juce::MemoryBlock& destData) override;
