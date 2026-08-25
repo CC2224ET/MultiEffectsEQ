@@ -19,9 +19,10 @@ private:
 
     
     juce::Slider lowMidCrossoverSlider;
-    
+    juce::Slider midHighCrossoverSlider;
     
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> lowMidCrossoverAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> midHighCrossoverAttachment;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MultieffectsEQEditor)
 };

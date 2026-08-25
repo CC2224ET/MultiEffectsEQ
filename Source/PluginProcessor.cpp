@@ -67,10 +67,13 @@ void MultieffectsEQProcessor::releaseResources()
 
 bool MultieffectsEQProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
 {
-    
+    if (layouts.getMainInputChannelSet() != layouts.getMainOutputChannelSet())
+        return false;
+
     if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::mono()
      && layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
         return false;
+
     return true;
 }
 
