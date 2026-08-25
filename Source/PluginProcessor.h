@@ -52,11 +52,6 @@ private:
     juce::AudioBuffer<float> midBuffer;
     juce::AudioBuffer<float> highBuffer;
 
-
-
-
-
-
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MultieffectsEQProcessor)

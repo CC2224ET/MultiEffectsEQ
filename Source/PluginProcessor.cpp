@@ -94,36 +94,47 @@ void MultieffectsEQProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
     midHighCrossoverLP.setCutoffFrequency(currentMidHighFreq);
     midHighCrossoverHP.setCutoffFrequency(currentMidHighFreq);
 
+    auto numSamples = buffer.getNumSamples();
     for (int ch = 0; ch < totalNumInputChannels; ++ch)
     {
-        auto numSamples = buffer.getNumSamples();
         lowBuffer.copyFrom(ch, 0, buffer, ch, 0, numSamples);
         midBuffer.copyFrom(ch, 0, buffer, ch, 0, numSamples);
-        highBuffer.copyFrom(ch, 0, buffer, ch, 0, numSamples);
     }
 
     juce::dsp::AudioBlock<float> lowBlock(lowBuffer);
     juce::dsp::AudioBlock<float> midBlock(midBuffer);
     juce::dsp::AudioBlock<float> highBlock(highBuffer);
 
-    juce::dsp::ProcessContextReplacing<float> lowContext(lowBlock);
-    juce::dsp::ProcessContextReplacing<float> midContext(midBlock);
-    juce::dsp::ProcessContextReplacing<float> highContext(highBlock);
+    auto activeLowBlock = lowBlock.getSubBlock(0, (size_t) numSamples);
+    auto activeMidBlock = midBlock.getSubBlock(0, (size_t) numSamples);
+    auto activeHighBlock = highBlock.getSubBlock(0, (size_t) numSamples);
 
+    juce::dsp::ProcessContextReplacing<float> lowContext(activeLowBlock);
+    juce::dsp::ProcessContextReplacing<float> midContext(activeMidBlock);
+    juce::dsp::ProcessContextReplacing<float> highContext(activeHighBlock);
+
+    // 1. Process Low band
     lowMidCrossoverLP.process(lowContext);
 
+    // 2. Extract Mid + High (Highpass) into midBuffer
     lowMidCrossoverHP.process(midContext);
+
+    // 3. Copy Mid + High signal into highBuffer
+    for (int ch = 0; ch < totalNumInputChannels; ++ch)
+    {
+        highBuffer.copyFrom(ch, 0, midBuffer, ch, 0, numSamples);
+    }
+
+    // 4. Split Mid + High into individual Mid and High bands
     midHighCrossoverLP.process(midContext);
-    
-    lowMidCrossoverHP.process(highContext); 
     midHighCrossoverHP.process(highContext);
 
     buffer.clear();
     for (int ch = 0; ch < totalNumInputChannels; ++ch)
     {
-        buffer.addFrom(ch, 0, lowBuffer, ch, 0, buffer.getNumSamples());
-        buffer.addFrom(ch, 0, midBuffer, ch, 0, buffer.getNumSamples());
-        buffer.addFrom(ch, 0, highBuffer, ch, 0, buffer.getNumSamples());
+        buffer.addFrom(ch, 0, lowBuffer, ch, 0, numSamples);
+        buffer.addFrom(ch, 0, midBuffer, ch, 0, numSamples);
+        buffer.addFrom(ch, 0, highBuffer, ch, 0, numSamples);
     }
 
   
