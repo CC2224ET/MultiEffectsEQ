@@ -1,6 +1,10 @@
 #pragma once
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_dsp/juce_dsp.h>
+#include "FXModule.h"
+#include "GainModule.h"
+#include <vector>
+#include <memory>
 
 class MultieffectsEQProcessor : public juce::AudioProcessor
 {
@@ -11,6 +15,8 @@ public:
     void prepareToPlay (double sampleRate, int samplesPerBlock) override;
 
     void releaseResources() override;
+
+    void reset() override;
 
     bool isBusesLayoutSupported (const BusesLayout& layouts) const override;
 
@@ -51,6 +57,18 @@ private:
     juce::AudioBuffer<float> lowBuffer;
     juce::AudioBuffer<float> midBuffer;
     juce::AudioBuffer<float> highBuffer;
+    // The Modular Effect Chains
+    std::vector<std::unique_ptr<FXModule>> lowBandChain;
+    std::vector<std::unique_ptr<FXModule>> midBandChain;
+    std::vector<std::unique_ptr<FXModule>> highBandChain;
+
+    // Splits/Compensates Low Band
+    juce::dsp::LinkwitzRileyFilter<float> lowCompensatorLP;
+    juce::dsp::LinkwitzRileyFilter<float> lowCompensatorHP;
+    juce::AudioBuffer<float> lowCompBuffer;
+
+    juce::SmoothedValue<float> smoothedLowMidFreq;
+    juce::SmoothedValue<float> smoothedMidHighFreq;
 
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 

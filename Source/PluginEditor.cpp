@@ -20,11 +20,18 @@ MultieffectsEQEditor::MultieffectsEQEditor (MultieffectsEQProcessor& p)
     midHighCrossoverAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
         audioProcessor.apvts, "mid_high_crossover", midHighCrossoverSlider);
 
+    // Register listeners after attachments — so the initial value set by the
+    // attachment doesn't trigger sliderValueChanged during construction
+    lowMidCrossoverSlider.addListener(this);
+    midHighCrossoverSlider.addListener(this);
+
     setSize (600, 400);
 }
 
 MultieffectsEQEditor::~MultieffectsEQEditor()
 {
+    lowMidCrossoverSlider.removeListener(this);
+    midHighCrossoverSlider.removeListener(this);
 }
 
 void MultieffectsEQEditor::paint (juce::Graphics& g)
@@ -45,4 +52,20 @@ void MultieffectsEQEditor::resized()
 {
     lowMidCrossoverSlider.setBounds(150, 150, 120, 120);
     midHighCrossoverSlider.setBounds(330, 150, 120, 120);
+}
+
+void MultieffectsEQEditor::sliderValueChanged (juce::Slider* slider)
+{
+    if (slider == &lowMidCrossoverSlider)
+    {
+        // If the low/mid crossover has been pushed above mid/high, clamp mid/high up to match
+        if (lowMidCrossoverSlider.getValue() > midHighCrossoverSlider.getValue())
+            midHighCrossoverSlider.setValue(lowMidCrossoverSlider.getValue(), juce::sendNotificationSync);
+    }
+    else if (slider == &midHighCrossoverSlider)
+    {
+        // If the mid/high crossover has been pulled below low/mid, clamp low/mid down to match
+        if (midHighCrossoverSlider.getValue() < lowMidCrossoverSlider.getValue())
+            lowMidCrossoverSlider.setValue(midHighCrossoverSlider.getValue(), juce::sendNotificationSync);
+    }
 }
