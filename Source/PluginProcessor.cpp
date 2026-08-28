@@ -1,13 +1,12 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
-
+//Boilerplate setup
 MultieffectsEQProcessor::MultieffectsEQProcessor()
      : AudioProcessor (BusesProperties()
                        .withInput  ("Input",  juce::AudioChannelSet::stereo(), true)
                        .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
                        ),
-       
        
        apvts (*this, nullptr, "Parameters", createParameterLayout())
 {
@@ -16,13 +15,12 @@ MultieffectsEQProcessor::MultieffectsEQProcessor()
 
 MultieffectsEQProcessor::~MultieffectsEQProcessor() {}
 
-
+//Create the crossover frequency parameters
 juce::AudioProcessorValueTreeState::ParameterLayout MultieffectsEQProcessor::createParameterLayout()
 {
    
     std::vector<std::unique_ptr<juce::RangedAudioParameter>> params;
 
-    
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID("low_mid_crossover", 1), 
         "Low/Mid Crossover",                      
@@ -38,9 +36,12 @@ juce::AudioProcessorValueTreeState::ParameterLayout MultieffectsEQProcessor::cre
     return { params.begin(), params.end() };
 }
 
+
 void MultieffectsEQProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
+    //Holds the processing details for the DSP
     juce::dsp::ProcessSpec spec;
+
     spec.sampleRate = sampleRate;
     spec.maximumBlockSize = samplesPerBlock;
     spec.numChannels = getTotalNumOutputChannels();
@@ -61,7 +62,7 @@ void MultieffectsEQProcessor::prepareToPlay (double sampleRate, int samplesPerBl
     midBuffer.setSize(spec.numChannels, samplesPerBlock);
     highBuffer.setSize(spec.numChannels, samplesPerBlock);
     lowCompBuffer.setSize(spec.numChannels, samplesPerBlock);
-
+    //Compensate for the phase change
     lowCompensatorLP.prepare(spec);
     lowCompensatorLP.setType(juce::dsp::LinkwitzRileyFilterType::lowpass);
 
@@ -77,7 +78,7 @@ void MultieffectsEQProcessor::prepareToPlay (double sampleRate, int samplesPerBl
 
     smoothedMidHighFreq.reset(sampleRate, 0.02);
     smoothedMidHighFreq.setCurrentAndTargetValue(initMidHigh);
-
+    //why auto&
     for (auto& effect : lowBandChain)  { effect->prepare(spec); }
     for (auto& effect : midBandChain)  { effect->prepare(spec); }
     for (auto& effect : highBandChain) { effect->prepare(spec); }
@@ -87,6 +88,7 @@ void MultieffectsEQProcessor::releaseResources()
 {
 }
 
+//Clears the internal states to prevent audio tails
 void MultieffectsEQProcessor::reset()
 {
     lowMidCrossoverLP.reset();
@@ -95,12 +97,12 @@ void MultieffectsEQProcessor::reset()
     midHighCrossoverHP.reset();
     lowCompensatorLP.reset();
     lowCompensatorHP.reset();
-
+    //same
     for (auto& effect : lowBandChain)  { effect->reset(); }
     for (auto& effect : midBandChain)  { effect->reset(); }
     for (auto& effect : highBandChain) { effect->reset(); }
 }
-
+//checking if the DAW layout is supported by the plugin
 bool MultieffectsEQProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
 {
     if (layouts.getMainInputChannelSet() != layouts.getMainOutputChannelSet())
@@ -113,29 +115,29 @@ bool MultieffectsEQProcessor::isBusesLayoutSupported (const BusesLayout& layouts
     return true;
 }
 
-
-void MultieffectsEQProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& /*midiMessages*/)
+void MultieffectsEQProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer&)
 {
-    
+    //Prevent floating point issue
     juce::ScopedNoDenormals noDenormals;
+
     auto totalNumInputChannels  = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
 
+    //clear output channels that don't have an input channel
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
 
     auto numSamples = buffer.getNumSamples();
     
+    //check the incoming block size isn't larger than what we have allocated, explain jassert
     jassert (numSamples <= lowBuffer.getNumSamples());
     if (numSamples > lowBuffer.getNumSamples())
         return;
     
-
-
-    // Set smoothing targets from APVTS — the smoother will ramp over 20ms
+    //Get the parameter value
+    // Set smoothing targets from APVTS
     float targetLowMidFreq  = apvts.getRawParameterValue("low_mid_crossover")->load();
     float targetMidHighFreq = apvts.getRawParameterValue("mid_high_crossover")->load();
-
 
     smoothedLowMidFreq.setTargetValue(targetLowMidFreq);
     smoothedMidHighFreq.setTargetValue(targetMidHighFreq);
@@ -144,26 +146,26 @@ void MultieffectsEQProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
     float currentLowMidFreq  = smoothedLowMidFreq.getNextValue();
     float currentMidHighFreq = smoothedMidHighFreq.getNextValue();
 
+    //Apply the smoothed value
     lowMidCrossoverLP.setCutoffFrequency(currentLowMidFreq);
     lowMidCrossoverHP.setCutoffFrequency(currentLowMidFreq);
-
     midHighCrossoverLP.setCutoffFrequency(currentMidHighFreq);
     midHighCrossoverHP.setCutoffFrequency(currentMidHighFreq);
     lowCompensatorLP.setCutoffFrequency(currentMidHighFreq);
     lowCompensatorHP.setCutoffFrequency(currentMidHighFreq);
 
-
+    //Copy the incoming audio to the processing buffer
     for (int ch = 0; ch < totalNumInputChannels; ++ch)
     {
         lowBuffer.copyFrom(ch, 0, buffer, ch, 0, numSamples);
         midBuffer.copyFrom(ch, 0, buffer, ch, 0, numSamples);
     }
 
-
     juce::dsp::AudioBlock<float> lowBlock(lowBuffer);
     juce::dsp::AudioBlock<float> midBlock(midBuffer);
     juce::dsp::AudioBlock<float> highBlock(highBuffer);
 
+    //Subblock
     auto activeLowBlock = lowBlock.getSubBlock(0, (size_t) numSamples);
     auto activeMidBlock = midBlock.getSubBlock(0, (size_t) numSamples);
     auto activeHighBlock = highBlock.getSubBlock(0, (size_t) numSamples);
@@ -172,23 +174,18 @@ void MultieffectsEQProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
     juce::dsp::ProcessContextReplacing<float> midContext(activeMidBlock);
     juce::dsp::ProcessContextReplacing<float> highContext(activeHighBlock);
 
-    // 1. Process Low band
     lowMidCrossoverLP.process(lowContext);
-
-    // 2. Extract Mid + High (Highpass) into midBuffer
     lowMidCrossoverHP.process(midContext);
 
-    // 3. Copy Mid + High signal into highBuffer
     for (int ch = 0; ch < totalNumInputChannels; ++ch)
     {
         highBuffer.copyFrom(ch, 0, midBuffer, ch, 0, numSamples);
     }
 
-    // 4. Split Mid + High into individual Mid and High bands
     midHighCrossoverLP.process(midContext);
     midHighCrossoverHP.process(highContext);
 
-    // 5. Phase-compensate Low band
+    //compensate for the phase difference 
     for (int ch = 0; ch < totalNumInputChannels; ++ch)
     {
         lowCompBuffer.copyFrom(ch, 0, lowBuffer, ch, 0, numSamples);
@@ -200,7 +197,7 @@ void MultieffectsEQProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
 
     lowCompensatorLP.process(lowContext);
     lowCompensatorHP.process(lowCompContext);
-
+    
     for (int ch = 0; ch < totalNumInputChannels; ++ch)
     {
         lowBuffer.addFrom(ch, 0, lowCompBuffer, ch, 0, numSamples);
@@ -222,6 +219,7 @@ void MultieffectsEQProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
     for (auto& effect : highBandChain) { effect->process(highContext); }
 
     buffer.clear();
+    //Add all the bands back together
     for (int ch = 0; ch < totalNumInputChannels; ++ch)
     {
         buffer.addFrom(ch, 0, lowBuffer, ch, 0, numSamples);
@@ -239,7 +237,7 @@ juce::AudioProcessorEditor* MultieffectsEQProcessor::createEditor()
 }
 
 
-
+//Called by the host when saving a daw or preset
 void MultieffectsEQProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
 
@@ -247,7 +245,7 @@ void MultieffectsEQProcessor::getStateInformation (juce::MemoryBlock& destData)
     std::unique_ptr<juce::XmlElement> xml (state.createXml());
     copyXmlToBinary (*xml, destData);
 }
-
+//Called by the host when loading a daw or preset
 void MultieffectsEQProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
     std::unique_ptr<juce::XmlElement> xmlState (getXmlFromBinary (data, sizeInBytes));
