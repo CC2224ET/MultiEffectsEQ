@@ -36,7 +36,6 @@ juce::AudioProcessorValueTreeState::ParameterLayout MultieffectsEQProcessor::cre
     return { params.begin(), params.end() };
 }
 
-
 void MultieffectsEQProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     //Holds the processing details for the DSP
@@ -78,7 +77,7 @@ void MultieffectsEQProcessor::prepareToPlay (double sampleRate, int samplesPerBl
 
     smoothedMidHighFreq.reset(sampleRate, 0.02);
     smoothedMidHighFreq.setCurrentAndTargetValue(initMidHigh);
-    //why auto&
+
     for (auto& effect : lowBandChain)  { effect->prepare(spec); }
     for (auto& effect : midBandChain)  { effect->prepare(spec); }
     for (auto& effect : highBandChain) { effect->prepare(spec); }
@@ -129,7 +128,7 @@ void MultieffectsEQProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
 
     auto numSamples = buffer.getNumSamples();
     
-    //check the incoming block size isn't larger than what we have allocated, explain jassert
+    //check the incoming block size isn't larger than what we have allocated
     jassert (numSamples <= lowBuffer.getNumSamples());
     if (numSamples > lowBuffer.getNumSamples())
         return;
