@@ -33,6 +33,11 @@ juce::AudioProcessorValueTreeState::ParameterLayout MultieffectsEQProcessor::cre
         juce::NormalisableRange<float>(1000.0f, 20000.0f, 1.0f, 0.3f), 
         2000.0f));
 
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID("mid_band_gain", 1), "Mid Band Gain",
+        juce::NormalisableRange<float>(-24.0f, 24.0f, 0.1f, 0.1f), 
+        0.0f));
+
     return { params.begin(), params.end() };
 }
 
@@ -137,6 +142,7 @@ void MultieffectsEQProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
     // Set smoothing targets from APVTS
     float targetLowMidFreq  = apvts.getRawParameterValue("low_mid_crossover")->load();
     float targetMidHighFreq = apvts.getRawParameterValue("mid_high_crossover")->load();
+    float currentMidGain = apvts.getRawParameterValue("mid_band_gain")->load();
 
     smoothedLowMidFreq.setTargetValue(targetLowMidFreq);
     smoothedMidHighFreq.setTargetValue(targetMidHighFreq);
@@ -208,7 +214,7 @@ void MultieffectsEQProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
     
     if (auto* gainFX = dynamic_cast<GainModule*>(midBandChain[0].get()))
     {
-        gainFX->updateGain(-6.0f); // Drop the mid band by 6dB
+        gainFX->updateGain(currentMidGain);
     }
 }
 
