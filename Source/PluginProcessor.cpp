@@ -238,7 +238,8 @@ void MultieffectsEQProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
 
 juce::AudioProcessorEditor* MultieffectsEQProcessor::createEditor()
 {
-    return new MultieffectsEQEditor (*this);
+    //return new MultieffectsEQEditor (*this);
+    return new juce::GenericAudioProcessorEditor (*this);
 }
 
 
