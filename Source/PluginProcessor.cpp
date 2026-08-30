@@ -147,9 +147,11 @@ void MultieffectsEQProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
     smoothedLowMidFreq.setTargetValue(targetLowMidFreq);
     smoothedMidHighFreq.setTargetValue(targetMidHighFreq);
 
-    // Advance the smoothers by one block and update filter coefficients if the value changed
-    float currentLowMidFreq  = smoothedLowMidFreq.getNextValue();
-    float currentMidHighFreq = smoothedMidHighFreq.getNextValue();
+    float currentLowMidFreq  = smoothedLowMidFreq.getCurrentValue();
+    float currentMidHighFreq = smoothedMidHighFreq.getCurrentValue();
+
+    smoothedLowMidFreq.skip(numSamples);
+    smoothedMidHighFreq.skip(numSamples);
 
     //Apply the smoothed value
     lowMidCrossoverLP.setCutoffFrequency(currentLowMidFreq);
