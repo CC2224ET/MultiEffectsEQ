@@ -3,7 +3,7 @@
 #include "PluginProcessor.h"
 
 class MultieffectsEQEditor : public juce::AudioProcessorEditor,
-                             public juce::Slider::Listener
+                             public juce::Timer
 {
 public:
     MultieffectsEQEditor (MultieffectsEQProcessor&);
@@ -11,18 +11,18 @@ public:
 
     void paint (juce::Graphics&) override;
     void resized() override;
-
-    // Slider::Listener — enforces crossover ordering constraint in the UI
-    void sliderValueChanged (juce::Slider* slider) override;
+    void timerCallback() override;
 
 private:
     MultieffectsEQProcessor& audioProcessor;
 
     juce::Slider lowMidCrossoverSlider;
     juce::Slider midHighCrossoverSlider;
+    juce::Slider midGainSlider;
 
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> lowMidCrossoverAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> midHighCrossoverAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> midGainAttachment;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MultieffectsEQEditor)
-};
+};

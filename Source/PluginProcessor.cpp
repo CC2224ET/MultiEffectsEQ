@@ -210,7 +210,6 @@ void MultieffectsEQProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
         lowBuffer.addFrom(ch, 0, lowCompBuffer, ch, 0, numSamples);
     }
 
-// Hardcode a gain change for testing purposes
     if (!midBandChain.empty())
 {
     
