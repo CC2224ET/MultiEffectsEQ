@@ -3,7 +3,8 @@
 #include "PluginProcessor.h"
 
 class MultieffectsEQEditor : public juce::AudioProcessorEditor,
-                             public juce::Timer
+                             public juce::Timer,
+                             public juce::Slider::Listener
 {
 public:
     MultieffectsEQEditor (MultieffectsEQProcessor&);
@@ -12,6 +13,8 @@ public:
     void paint (juce::Graphics&) override;
     void resized() override;
     void timerCallback() override;
+
+    void sliderValueChanged (juce::Slider* slider) override;
 
 private:
     MultieffectsEQProcessor& audioProcessor;

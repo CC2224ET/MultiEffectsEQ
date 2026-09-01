@@ -35,7 +35,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout MultieffectsEQProcessor::cre
 
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID("mid_band_gain", 1), "Mid Band Gain",
-        juce::NormalisableRange<float>(-24.0f, 24.0f, 0.1f, 0.1f), 
+        juce::NormalisableRange<float>(-24.0f, 24.0f, 0.1f, 1.0f), 
         0.0f));
 
     return { params.begin(), params.end() };
@@ -239,8 +239,8 @@ void MultieffectsEQProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
 
 juce::AudioProcessorEditor* MultieffectsEQProcessor::createEditor()
 {
-    //return new MultieffectsEQEditor (*this);
-    return new juce::GenericAudioProcessorEditor (*this);
+    return new MultieffectsEQEditor (*this);
+    //return new juce::GenericAudioProcessorEditor (*this);
 }
 
 
