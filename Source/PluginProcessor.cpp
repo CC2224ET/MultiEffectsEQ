@@ -1,5 +1,6 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include "FXSlot.h"
 
 //Boilerplate setup
 MultieffectsEQProcessor::MultieffectsEQProcessor()
@@ -10,7 +11,7 @@ MultieffectsEQProcessor::MultieffectsEQProcessor()
        
        apvts (*this, nullptr, "Parameters", createParameterLayout())
 {
-    midBandChain.push_back(std::make_unique<GainModule>());
+    midBandChain.push_back(std::make_unique<FXSlot>());
 }
 
 MultieffectsEQProcessor::~MultieffectsEQProcessor() {}
@@ -37,6 +38,16 @@ juce::AudioProcessorValueTreeState::ParameterLayout MultieffectsEQProcessor::cre
         juce::ParameterID("mid_band_gain", 1), "Mid Band Gain",
         juce::NormalisableRange<float>(-24.0f, 24.0f, 0.1f, 1.0f), 
         0.0f));
+
+    params.push_back(std::make_unique<juce::AudioParameterChoice>(
+    "mid_slot_1_fx", "Mid Slot 1 Effect", 
+    juce::StringArray{"Bypass", "Gain", "Distortion"}, 
+    0));
+
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+    "mid_drive", "Mid Drive", 
+    juce::NormalisableRange<float>(0.0f, 24.0f, 0.1f, 1.0f), 
+    0.0f));
 
     return { params.begin(), params.end() };
 }
@@ -210,14 +221,20 @@ void MultieffectsEQProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
         lowBuffer.addFrom(ch, 0, lowCompBuffer, ch, 0, numSamples);
     }
 
+    float currentMidDrive = apvts.getRawParameterValue("mid_drive")->load();
+    int midSlotChoice = (int)apvts.getRawParameterValue("mid_slot_1_fx")->load();
+
     if (!midBandChain.empty())
-{
-    
-    if (auto* gainFX = dynamic_cast<GainModule*>(midBandChain[0].get()))
     {
-        gainFX->updateGain(currentMidGain);
+    
+        if (auto* slot = dynamic_cast<FXSlot*>(midBandChain[0].get()))
+        {
+            slot->setEffectChoice(midSlotChoice);
+
+            slot->getGainModule().updateGain(currentMidGain);
+            slot->getDistortionModule().updateDrive(currentMidDrive);
+        }
     }
-}
 
 // Process the audio through all loaded effects serially
     for (auto& effect : lowBandChain)  { effect->process(lowContext); }
