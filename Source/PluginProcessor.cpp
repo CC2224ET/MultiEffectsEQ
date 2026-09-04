@@ -34,20 +34,17 @@ juce::AudioProcessorValueTreeState::ParameterLayout MultieffectsEQProcessor::cre
         juce::NormalisableRange<float>(1000.0f, 20000.0f, 1.0f, 0.3f), 
         2000.0f));
 
-    params.push_back(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID("mid_band_gain", 1), "Mid Band Gain",
-        juce::NormalisableRange<float>(-24.0f, 24.0f, 0.1f, 1.0f), 
-        0.0f));
-
     params.push_back(std::make_unique<juce::AudioParameterChoice>(
     "mid_slot_1_fx", "Mid Slot 1 Effect", 
     juce::StringArray{"Bypass", "Gain", "Distortion"}, 
     0));
 
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
-    "mid_drive", "Mid Drive", 
-    juce::NormalisableRange<float>(0.0f, 24.0f, 0.1f, 1.0f), 
-    0.0f));
+        "mid_macro", "Mid Macro", 
+        juce::NormalisableRange<float>(-1.0f, 1.0f, 0.01f), 
+        0.0f)); // Default to the center (0.0)
+
+    
 
     return { params.begin(), params.end() };
 }
@@ -153,7 +150,7 @@ void MultieffectsEQProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
     // Set smoothing targets from APVTS
     float targetLowMidFreq  = apvts.getRawParameterValue("low_mid_crossover")->load();
     float targetMidHighFreq = apvts.getRawParameterValue("mid_high_crossover")->load();
-    float currentMidGain = apvts.getRawParameterValue("mid_band_gain")->load();
+    targetMidHighFreq = std::max(targetMidHighFreq, targetLowMidFreq + 10.0f);
 
     smoothedLowMidFreq.setTargetValue(targetLowMidFreq);
     smoothedMidHighFreq.setTargetValue(targetMidHighFreq);
@@ -221,18 +218,16 @@ void MultieffectsEQProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
         lowBuffer.addFrom(ch, 0, lowCompBuffer, ch, 0, numSamples);
     }
 
-    float currentMidDrive = apvts.getRawParameterValue("mid_drive")->load();
+    float currentMacro = apvts.getRawParameterValue("mid_macro")->load();
     int midSlotChoice = (int)apvts.getRawParameterValue("mid_slot_1_fx")->load();
-
+    
     if (!midBandChain.empty())
     {
     
         if (auto* slot = dynamic_cast<FXSlot*>(midBandChain[0].get()))
         {
             slot->setEffectChoice(midSlotChoice);
-
-            slot->getGainModule().updateGain(currentMidGain);
-            slot->getDistortionModule().updateDrive(currentMidDrive);
+            slot->setMacro(currentMacro);
         }
     }
 

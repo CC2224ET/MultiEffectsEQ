@@ -39,6 +39,7 @@ public:
 
     void updateDrive (float driveDecibels)
     {
+        driveDecibels = std::max(0.0f, driveDecibels);
         inputGain.setGainDecibels(driveDecibels);
         outputGain.setGainDecibels(-driveDecibels);
     }

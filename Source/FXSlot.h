@@ -28,14 +28,27 @@ public:
         distortion.reset();
     }
 
-    void setEffectChoice (int choice)
-    {
-        activeEffect = choice;
+    void setEffectChoice (int choice) 
+    { 
+        activeEffect = choice; 
     }
 
-    GainModule& getGainModule() {return gain; }
-    DistortionModule& getDistortionModule() { return distortion; }
-
+    void setMacro(float macroValue)
+    {
+        // macroValue is always a normalized value between 0.0 and 1.0
+        switch (activeEffect)
+        {
+            case 1: 
+                // Gain: Map 0.0-1.0 to -24dB to +24dB
+                gain.updateGain(juce::jmap(macroValue, -1.0f, 1.0f, -24.0f, 24.0f)); 
+                break;
+            case 2: 
+                // Distortion: Map 0.0-1.0 to 0dB to 24dB of drive
+                float unipolarMacro = std::max(0.0f, macroValue);
+                distortion.updateDrive(juce::jmap(unipolarMacro, 0.0f, 1.0f, 0.0f, 24.0f)); 
+                break;
+        }
+    }
 private:
     int activeEffect = 0;
 
