@@ -73,13 +73,10 @@ void MultieffectsEQProcessor::prepareToPlay (double sampleRate, int samplesPerBl
     lowBuffer.setSize(spec.numChannels, samplesPerBlock);
     midBuffer.setSize(spec.numChannels, samplesPerBlock);
     highBuffer.setSize(spec.numChannels, samplesPerBlock);
-    lowCompBuffer.setSize(spec.numChannels, samplesPerBlock);
+   
     //Compensate for the phase change
-    lowCompensatorLP.prepare(spec);
-    lowCompensatorLP.setType(juce::dsp::LinkwitzRileyFilterType::lowpass);
-
-    lowCompensatorHP.prepare(spec);
-    lowCompensatorHP.setType(juce::dsp::LinkwitzRileyFilterType::highpass);
+    lowCompensatorAllPass.prepare(spec);
+    lowCompensatorAllPass.setType(juce::dsp::LinkwitzRileyFilterType::allpass);
 
     // Initialise smoothers — 20ms ramp to avoid zipper noise on crossover changes
     float initLowMid  = apvts.getRawParameterValue("low_mid_crossover")->load();
@@ -107,8 +104,7 @@ void MultieffectsEQProcessor::reset()
     lowMidCrossoverHP.reset();
     midHighCrossoverLP.reset();
     midHighCrossoverHP.reset();
-    lowCompensatorLP.reset();
-    lowCompensatorHP.reset();
+    lowCompensatorAllPass.reset();
     //same
     for (auto& effect : lowBandChain)  { effect->reset(); }
     for (auto& effect : midBandChain)  { effect->reset(); }
@@ -146,7 +142,6 @@ void MultieffectsEQProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
     if (numSamples > lowBuffer.getNumSamples())
         return;
     
-    //Get the parameter value
     // Set smoothing targets from APVTS
     float targetLowMidFreq  = apvts.getRawParameterValue("low_mid_crossover")->load();
     float targetMidHighFreq = apvts.getRawParameterValue("mid_high_crossover")->load();
@@ -166,8 +161,8 @@ void MultieffectsEQProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
     lowMidCrossoverHP.setCutoffFrequency(currentLowMidFreq);
     midHighCrossoverLP.setCutoffFrequency(currentMidHighFreq);
     midHighCrossoverHP.setCutoffFrequency(currentMidHighFreq);
-    lowCompensatorLP.setCutoffFrequency(currentMidHighFreq);
-    lowCompensatorHP.setCutoffFrequency(currentMidHighFreq);
+
+    lowCompensatorAllPass.setCutoffFrequency(currentMidHighFreq);
 
     //Copy the incoming audio to the processing buffer
     for (int ch = 0; ch < totalNumInputChannels; ++ch)
@@ -200,23 +195,7 @@ void MultieffectsEQProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
     midHighCrossoverLP.process(midContext);
     midHighCrossoverHP.process(highContext);
 
-    //compensate for the phase difference 
-    for (int ch = 0; ch < totalNumInputChannels; ++ch)
-    {
-        lowCompBuffer.copyFrom(ch, 0, lowBuffer, ch, 0, numSamples);
-    }
-
-    juce::dsp::AudioBlock<float> lowCompBlock(lowCompBuffer);
-    auto activeLowCompBlock = lowCompBlock.getSubBlock(0, (size_t) numSamples);
-    juce::dsp::ProcessContextReplacing<float> lowCompContext(activeLowCompBlock);
-
-    lowCompensatorLP.process(lowContext);
-    lowCompensatorHP.process(lowCompContext);
-    
-    for (int ch = 0; ch < totalNumInputChannels; ++ch)
-    {
-        lowBuffer.addFrom(ch, 0, lowCompBuffer, ch, 0, numSamples);
-    }
+    lowCompensatorAllPass.process(lowContext);
 
     float currentMacro = apvts.getRawParameterValue("mid_macro")->load();
     int midSlotChoice = (int)apvts.getRawParameterValue("mid_slot_1_fx")->load();

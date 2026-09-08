@@ -61,12 +61,9 @@ private:
     std::vector<std::unique_ptr<FXModule>> lowBandChain;
     std::vector<std::unique_ptr<FXModule>> midBandChain;
     std::vector<std::unique_ptr<FXModule>> highBandChain;
-
-    // Splits/Compensates Low Band
-    juce::dsp::LinkwitzRileyFilter<float> lowCompensatorLP;
-    juce::dsp::LinkwitzRileyFilter<float> lowCompensatorHP;
-    juce::AudioBuffer<float> lowCompBuffer;
-
+    //All pass for phase correction
+    juce::dsp::LinkwitzRileyFilter<float> lowCompensatorAllPass;
+    //Smoothing to prevent zipper
     juce::SmoothedValue<float> smoothedLowMidFreq;
     juce::SmoothedValue<float> smoothedMidHighFreq;
 
