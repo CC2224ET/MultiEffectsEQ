@@ -2,6 +2,7 @@
 #include "FXModule.h"
 #include "GainModule.h"
 #include "DistortionModule.h"
+#include "AutoPanModule.h"
 
 class FXSlot : public FXModule
 {
@@ -10,6 +11,7 @@ public:
     {
         gain.prepare(spec);
         distortion.prepare(spec);
+        autopan.prepare(spec);
     }
 
     void process (const juce::dsp::ProcessContextReplacing<float>& context) override
@@ -19,6 +21,7 @@ public:
             case 0: break;
             case 1: gain.process(context); break;
             case 2: distortion.process(context); break;
+            case 3: autopan.process(context); break;
         }
     }
 
@@ -26,6 +29,7 @@ public:
     {
         gain.reset();
         distortion.reset();
+        autopan.reset();
     }
 
     void setEffectChoice (int choice) 
@@ -35,6 +39,7 @@ public:
 
     void setMacro(float macroValue)
     {
+        float unipolarMacro = std::max(0.0f, macroValue);
         // macroValue is always a normalized value between 0.0 and 1.0
         switch (activeEffect)
         {
@@ -44,8 +49,11 @@ public:
                 break;
             case 2: 
                 // Distortion: Map 0.0-1.0 to 0dB to 24dB of drive
-                float unipolarMacro = std::max(0.0f, macroValue);
                 distortion.updateDrive(juce::jmap(unipolarMacro, 0.0f, 1.0f, 0.0f, 24.0f)); 
+                break;
+            case 3:
+                // Autopan Map 0.0-1.0 to panrate/depth
+                autopan.updateMacro(unipolarMacro);
                 break;
         }
     }
@@ -54,4 +62,5 @@ private:
 
     GainModule gain;
     DistortionModule distortion;
+    AutoPanModule autopan;
 };

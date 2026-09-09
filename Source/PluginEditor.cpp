@@ -4,7 +4,6 @@
 MultieffectsEQEditor::MultieffectsEQEditor (MultieffectsEQProcessor& p)
     : AudioProcessorEditor (&p), audioProcessor (p)
 {
-    // 1. Setup Sliders (Replaced specific effect sliders with the unified macroSlider)
     for (auto* slider : { &lowMidCrossoverSlider, &midHighCrossoverSlider, &macroSlider})
     {
         slider->setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
@@ -13,12 +12,12 @@ MultieffectsEQEditor::MultieffectsEQEditor (MultieffectsEQProcessor& p)
         addAndMakeVisible(slider);
     }
 
-    // 2. Setup the Dropdown Menu
-    midSlot1Choice.addItemList({"Bypass", "Gain", "Distortion"}, 1);
+    //Setup the Dropdown Menu
+    midSlot1Choice.addItemList({"Bypass", "Gain", "Distortion", "AutoPan"}, 1);
     midSlot1Choice.setJustificationType(juce::Justification::centred);
     addAndMakeVisible(midSlot1Choice);
 
-    // 3. Bind UI to APVTS
+    //Bind UI to APVTS
     lowMidCrossoverAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(audioProcessor.apvts, "low_mid_crossover", lowMidCrossoverSlider);
     midHighCrossoverAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(audioProcessor.apvts, "mid_high_crossover", midHighCrossoverSlider);
     midSlot1ChoiceAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(audioProcessor.apvts, "mid_slot_1_fx", midSlot1Choice);
@@ -76,23 +75,29 @@ void MultieffectsEQEditor::paint (juce::Graphics& g)
     g.drawVerticalLine(juce::roundToInt(midHighNormX * width), 0.0f, (float)height);
 
     float visualBumpDB = 0.0f;
-    juce::Colour curveColor = juce::Colours::grey; // Default for Bypass
+    juce::Colour curveColour = juce::Colours::grey; // Default for Bypass
 
     if (activeEffect == 1) // Gain
     {
         visualBumpDB = juce::jmap(macroValue, -1.0f, 1.0f, -24.0f, 24.0f);
-        curveColor = juce::Colours::cyan;
+        curveColour = juce::Colours::cyan;
     }
     else if (activeEffect == 2) // Distortion
     {
         float unipolarMacro = std::max(0.0f, macroValue);
         visualBumpDB = juce::jmap(unipolarMacro, 0.0f, 1.0f, 0.0f, 24.0f);
-        curveColor = juce::Colours::pink;
+        curveColour = juce::Colours::pink;
+    }
+    else if (activeEffect == 3) //Autopan
+    {
+        float unipolarMacro = std::max(0.0f, macroValue);
+        visualBumpDB = juce::jmap(unipolarMacro, 0.0f, 1.0f, 0.0f, 24.0f);
+        curveColour = juce::Colours::green;
     }
 
     float midVisualLinear = juce::Decibels::decibelsToGain(visualBumpDB);
 
-    // --- 3. Calculate and Draw Curve ---
+    //Calculate graph
     auto lowMidLP  = juce::dsp::IIR::Coefficients<float>::makeLowPass(sampleRate, lowMidFreq);
     auto lowMidHP  = juce::dsp::IIR::Coefficients<float>::makeHighPass(sampleRate, lowMidFreq);
     auto midHighLP = juce::dsp::IIR::Coefficients<float>::makeLowPass(sampleRate, midHighFreq);
@@ -121,7 +126,7 @@ void MultieffectsEQEditor::paint (juce::Graphics& g)
         else        responseCurve.lineTo((float)x, yMap);
     }
 
-    g.setColour(curveColor);
+    g.setColour(curveColour);
     g.strokePath(responseCurve, juce::PathStrokeType(2.0f));
 }
 
@@ -165,7 +170,7 @@ void MultieffectsEQEditor::sliderValueChanged (juce::Slider* slider)
     else if (slider == &macroSlider)
     {
         int activeEffect = (int)audioProcessor.apvts.getRawParameterValue("mid_slot_1_fx")->load();
-        if (activeEffect == 2 && macroSlider.getValue() < 0.0)
+        if ((activeEffect == 2 || activeEffect == 3) && macroSlider.getValue() < 0.0)
         {
             macroSlider.setValue(0.0, juce::sendNotificationSync);
         }
@@ -182,7 +187,7 @@ void MultieffectsEQEditor::updateMacroSliderRange()
     if (activeEffect != lastActiveEffect)
     {
         lastActiveEffect = activeEffect;
-        if (activeEffect == 2) // Distortion
+        if (activeEffect == 2 || activeEffect == 3) // Distortion or AutoPan
         {
             macroSlider.setRange(0.0, 1.0, 0.01);
             if (macroSlider.getValue() < 0.0)

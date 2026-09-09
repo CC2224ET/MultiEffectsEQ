@@ -36,7 +36,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout MultieffectsEQProcessor::cre
 
     params.push_back(std::make_unique<juce::AudioParameterChoice>(
     "mid_slot_1_fx", "Mid Slot 1 Effect", 
-    juce::StringArray{"Bypass", "Gain", "Distortion"}, 
+    juce::StringArray{"Bypass", "Gain", "Distortion", "AutoPan"}, 
     0));
 
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
